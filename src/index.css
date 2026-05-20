@@ -1,12 +1,10 @@
 body {
 	margin: 0;
 	padding: 0;
-	/* height: 95vh; */
 	min-height: 95vh;
 	background-color: #f1f5f9;
 	background-image: url("./assets/todoBG.jpg");
 	background-position: center;
-	/* background-size: cover; */
 	background-repeat: no-repeat;
 	background-attachment: fixed;
 	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
