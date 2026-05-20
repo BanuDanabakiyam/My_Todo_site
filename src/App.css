@@ -248,3 +248,12 @@ h1 {
 		max-height: 82vh;
 	}
 }
+
+@media (min-width: 2000px) {
+	.app-shell {
+		min-height: 94vh;
+	}
+	.todo-app {
+		max-height: 82vh;
+	}
+}
