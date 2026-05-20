@@ -256,6 +256,14 @@ h1 {
 	color: #1e293b;
 }
 
+@media (min-width: 400px) {
+	.app-shell {
+		min-height: 90vh;
+	}
+	.todo-app {
+		max-height: 80vh;
+	}
+}
 @media (max-width: 640px) {
 	.todo-app {
 		padding: 1rem;
@@ -271,12 +279,12 @@ h1 {
 		align-items: stretch;
 	}
 }
-@media (min-width: 400px) {
+@media (min-width: 1000px) {
 	.app-shell {
-		min-height: 90vh;
+		min-height: 86vh;
 	}
 	.todo-app {
-		max-height: 80vh;
+		max-height: 75vh;
 	}
 }
 
