@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import "./App.css";
-import todoBG from "./assets/todoBG.jpg";
+import todoBG from "../src/assets/nature.jpeg";
 
 function App() {
 	const [taskInput, setTaskInput] = useState("");
@@ -220,10 +220,10 @@ function App() {
 	}, [taskInput]);
 
 	return (
-		<div>
+		<div className="app-shell" style={{ backgroundImage: `url(${todoBG})` }}>
 			<div className="todo-app">
 				<div className="todo-header">
-					<h1>Todo List</h1>
+					<h1>My Todo List</h1>
 					{todos.length > 0 ? (
 						<button
 							type="button"
