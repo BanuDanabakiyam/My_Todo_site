@@ -1,7 +1,20 @@
+.app-shell {
+	width: 100%;
+	min-height: 95vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: contain;
+	/* background-size: cover; */
+	background-attachment: fixed;
+}
+
 .todo-app {
 	/* width: min(700px, 100%); */
 	padding: 2rem;
-	border: 1px solid #e2e8f0;
+	border: 1px solid red;
 	border-radius: 12px;
 	/* background: #ffffff; */
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
