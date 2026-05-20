@@ -220,7 +220,7 @@ function App() {
 	}, [taskInput]);
 
 	return (
-		<div className="app-shell" style={{ backgroundImage: `url(${todoBG})` }}>
+		<div>
 			<div className="todo-app">
 				<div className="todo-header">
 					<h1>Todo List</h1>

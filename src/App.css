@@ -1,23 +1,29 @@
 .app-shell {
 	width: 100%;
-	min-height: 95vh;
+	min-height: 100vh;
+	min-height: 100dvh;
 	display: flex;
 	justify-content: center;
 	align-items: center;
 	background-position: center;
 	background-repeat: no-repeat;
-	background-size: contain;
-	/* background-size: cover; */
+	background-size: cover;
 	background-attachment: fixed;
+	overflow: hidden;
+	padding: 1rem;
 }
 
 .todo-app {
-	/* width: min(700px, 100%); */
+	width: min(700px, 100%);
 	padding: 2rem;
-	border: 1px solid red;
+	border: 1px solid #e2e8f0;
 	border-radius: 12px;
 	/* background: #ffffff; */
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100dvh - 2rem);
+	overflow: hidden;
 }
 
 h1 {
@@ -89,6 +95,10 @@ h1 {
 	list-style: none;
 	display: grid;
 	gap: 0.65rem;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding-right: 0.25rem;
 }
 
 .todo-item {
@@ -200,6 +210,7 @@ h1 {
 @media (max-width: 640px) {
 	.todo-app {
 		padding: 1rem;
+		max-height: calc(100dvh - 2rem);
 	}
 
 	.todo-form {
