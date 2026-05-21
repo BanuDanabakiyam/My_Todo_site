@@ -349,6 +349,16 @@ h1 {
 	color: #ffffff;
 }
 
+.login-loading-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(15, 23, 42, 0.35);
+}
+
 .todo-form button:disabled,
 .todo-form input:disabled {
 	opacity: 0.6;

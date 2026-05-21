@@ -1,11 +1,9 @@
 import { useMemo, useState, useEffect } from "react";
+import { OrbitProgress } from "react-loading-indicators";
 import "./App.css";
 import todoBG from "../src/assets/nature.jpeg";
 
-const VALID_USERS = [
-	{ username: "demo", password: "demo123" },
-	{ username: "admin", password: "admin123" },
-];
+const VALID_USERS = [{ username: "admin", password: "12345" }];
 
 const USER_STORAGE_KEY = "todoAppUser";
 
@@ -38,6 +36,8 @@ const loadTodosForUser = (username) => {
 function App() {
 	const [user, setUser] = useState(() => loadUserFromStorage());
 	const [showLoginModal, setShowLoginModal] = useState(false);
+	const [isLoginLoading, setIsLoginLoading] = useState(false);
+	const [pendingLoginUsername, setPendingLoginUsername] = useState(null);
 	const [loginUsername, setLoginUsername] = useState("");
 	const [loginPassword, setLoginPassword] = useState("");
 	const [loginError, setLoginError] = useState("");
@@ -215,13 +215,26 @@ function App() {
 			return;
 		}
 
-		setUser({ username: match.username });
-		setTodos(loadTodosForUser(match.username));
 		setShowLoginModal(false);
 		setLoginUsername("");
 		setLoginPassword("");
+		setIsLoginLoading(true);
+		setPendingLoginUsername(match.username);
 		setLoginError("");
 	};
+
+	useEffect(() => {
+		if (!isLoginLoading || !pendingLoginUsername) return;
+
+		const timer = window.setTimeout(() => {
+			setUser({ username: pendingLoginUsername });
+			setTodos(loadTodosForUser(pendingLoginUsername));
+			setIsLoginLoading(false);
+			setPendingLoginUsername(null);
+		}, 2000);
+
+		return () => window.clearTimeout(timer);
+	}, [isLoginLoading, pendingLoginUsername]);
 
 	const handleLogout = () => {
 		if (user) {
@@ -239,6 +252,8 @@ function App() {
 		setEditError("");
 		setShowDeleteAllModal(false);
 		setShowLoginModal(false);
+		setIsLoginLoading(false);
+		setPendingLoginUsername(null);
 	};
 
 	const handleStartEditTodo = (todo) => {
@@ -490,11 +505,6 @@ function App() {
 							aria-labelledby="login-modal-title"
 							onClick={(event) => event.stopPropagation()}
 						>
-							{/* <h2 id="login-modal-title">Log in</h2>
-							<p className="login-hint">
-								Demo: <strong>demo</strong> / <strong>demo123</strong> or{" "}
-								<strong>admin</strong> / <strong>admin123</strong>
-							</p> */}
 							<form className="login-form" onSubmit={handleLogin}>
 								<label>
 									Username
@@ -539,6 +549,22 @@ function App() {
 								</div>
 							</form>
 						</div>
+					</div>
+				) : null}
+
+				{isLoginLoading ? (
+					<div
+						className="login-loading-overlay"
+						role="status"
+						aria-live="polite"
+						aria-label="Signing in"
+					>
+						<OrbitProgress
+							color="#32cd32"
+							size="small"
+							text=""
+							textColor=""
+						/>
 					</div>
 				) : null}
 
