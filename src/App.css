@@ -1,4 +1,5 @@
 .app-shell {
+	position: relative;
 	width: 100%;
 	min-height: 86vh;
 	display: flex;
@@ -34,17 +35,20 @@ h1 {
 
 .todo-header {
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
 	gap: 0.75rem;
 }
 
 .header-actions {
+	position: absolute;
+	top: 1rem;
+	right: 1rem;
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
 	justify-content: flex-end;
 	gap: 0.5rem;
+	z-index: 10;
 }
 
 .user-greeting {
@@ -255,6 +259,9 @@ h1 {
 	border-radius: 12px;
 	background: #ffffff;
 	box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+	font-family: "Nunito", sans-serif;
+	font-optical-sizing: auto;
+	font-style: normal;
 }
 
 .modal-dialog h2 {
@@ -318,7 +325,7 @@ h1 {
 	padding: 0.65rem 0.85rem;
 	border: 1px solid #cbd5e1;
 	border-radius: 8px;
-	font-size: 12px;
+	font-size: 15px;
 	outline: none;
 }
 
@@ -326,8 +333,10 @@ h1 {
 	border-color: #228b22;
 }
 
-.login-form-error {
+.modal-dialog p.login-form-error {
 	margin: 0;
+	color: #dc2626;
+	font-weight: 500;
 }
 
 .modal-btn-login {

@@ -336,40 +336,36 @@ function App() {
 
 	return (
 		<div className="app-shell" style={{ backgroundImage: `url(${todoBG})` }}>
+			<div className="header-actions">
+				{user ? (
+					<>
+						<span className="user-greeting">Hi, {user.username}</span>
+						<button type="button" className="logout-btn" onClick={handleLogout}>
+							Logout
+						</button>
+						{todos.length > 0 ? (
+							<button
+								type="button"
+								className="delete-all-btn"
+								onClick={handleOpenDeleteAllModal}
+							>
+								Delete All
+							</button>
+						) : null}
+					</>
+				) : (
+					<button
+						type="button"
+						className="login-btn"
+						onClick={handleOpenLoginModal}
+					>
+						Login
+					</button>
+				)}
+			</div>
 			<div className="todo-app">
 				<div className="todo-header">
 					<h1>My Todo List</h1>
-					<div className="header-actions">
-						{user ? (
-							<>
-								<span className="user-greeting">Hi, {user.username}</span>
-								<button
-									type="button"
-									className="logout-btn"
-									onClick={handleLogout}
-								>
-									Logout
-								</button>
-								{todos.length > 0 ? (
-									<button
-										type="button"
-										className="delete-all-btn"
-										onClick={handleOpenDeleteAllModal}
-									>
-										Delete All
-									</button>
-								) : null}
-							</>
-						) : (
-							<button
-								type="button"
-								className="login-btn"
-								onClick={handleOpenLoginModal}
-							>
-								Login
-							</button>
-						)}
-					</div>
 				</div>
 				<p className="subtitle">Plan your day, one task at a time.</p>
 
@@ -398,84 +394,87 @@ function App() {
 				{formError ? <p className="form-error">{formError}</p> : null}
 
 				{user ? (
-				<>
-				<section className="todo-meta">
-					<span>Total: {todos.length}</span>
-					<span>Completed: {completedCount}</span>
-					<span>NotCompleted: {notCompletedCount}</span>
-				</section>
+					<>
+						<section className="todo-meta">
+							<span>Total: {todos.length}</span>
+							<span>Completed: {completedCount}</span>
+							<span>NotCompleted: {notCompletedCount}</span>
+						</section>
 
-				<ul className="todo-list">
-					{todos.length === 0 ? (
-						<li className="empty-state">No todos yet. Add your first task.</li>
-					) : (
-						todos.map((todo) => (
-							<li key={todo.id} className="todo-item">
-								<label>
-									<input
-										type="checkbox"
-										checked={todo.completed}
-										disabled={
-											deletingTodoId === todo.id || editingTodoId === todo.id
-										}
-										onChange={() => handleToggleTodo(todo.id)}
-									/>
-									{editingTodoId === todo.id ? (
-										<input
-											type="text"
-											className="todo-edit-input"
-											value={editInput}
-											onChange={(event) => {
-												setEditInput(event.target.value);
-												if (editError) setEditError("");
-											}}
-										/>
-									) : (
-										<span className={todo.completed ? "done" : ""}>
-											{todo.text}
-										</span>
-									)}
-								</label>
-								<div className="todo-actions">
-									{editingTodoId === todo.id ? (
-										<>
+						<ul className="todo-list">
+							{todos.length === 0 ? (
+								<li className="empty-state">
+									No todos yet. Add your first task.
+								</li>
+							) : (
+								todos.map((todo) => (
+									<li key={todo.id} className="todo-item">
+										<label>
+											<input
+												type="checkbox"
+												checked={todo.completed}
+												disabled={
+													deletingTodoId === todo.id ||
+													editingTodoId === todo.id
+												}
+												onChange={() => handleToggleTodo(todo.id)}
+											/>
+											{editingTodoId === todo.id ? (
+												<input
+													type="text"
+													className="todo-edit-input"
+													value={editInput}
+													onChange={(event) => {
+														setEditInput(event.target.value);
+														if (editError) setEditError("");
+													}}
+												/>
+											) : (
+												<span className={todo.completed ? "done" : ""}>
+													{todo.text}
+												</span>
+											)}
+										</label>
+										<div className="todo-actions">
+											{editingTodoId === todo.id ? (
+												<>
+													<button
+														type="button"
+														onClick={() => handleSaveEditTodo(todo.id)}
+													>
+														Save
+													</button>
+													<button
+														type="button"
+														className="cancel-btn"
+														onClick={handleCancelEditTodo}
+													>
+														Cancel
+													</button>
+												</>
+											) : (
+												<button
+													type="button"
+													disabled={deletingTodoId === todo.id}
+													onClick={() => handleStartEditTodo(todo)}
+												>
+													Update
+												</button>
+											)}
 											<button
 												type="button"
-												onClick={() => handleSaveEditTodo(todo.id)}
+												disabled={deletingTodoId === todo.id}
+												onClick={() => handleDeleteTodo(todo.id)}
 											>
-												Save
+												{deletingTodoId === todo.id ? "Deleting..." : "Delete"}
 											</button>
-											<button
-												type="button"
-												className="cancel-btn"
-												onClick={handleCancelEditTodo}
-											>
-												Cancel
-											</button>
-										</>
-									) : (
-										<button
-											type="button"
-											disabled={deletingTodoId === todo.id}
-											onClick={() => handleStartEditTodo(todo)}
-										>
-											Update
-										</button>
-									)}
-									<button
-										type="button"
-										disabled={deletingTodoId === todo.id}
-										onClick={() => handleDeleteTodo(todo.id)}
-									>
-										{deletingTodoId === todo.id ? "Deleting..." : "Delete"}
-									</button>
-								</div>
-							</li>
-						))
-					)}
-				</ul>
-				{editError ? <p className="form-error">{editError}</p> : null}
-				</>
+										</div>
+									</li>
+								))
+							)}
+						</ul>
+						{editError ? <p className="form-error">{editError}</p> : null}
+					</>
 				) : null}
 
 				{showLoginModal ? (
@@ -491,11 +490,11 @@ function App() {
 							aria-labelledby="login-modal-title"
 							onClick={(event) => event.stopPropagation()}
 						>
-							<h2 id="login-modal-title">Log in</h2>
+							{/* <h2 id="login-modal-title">Log in</h2>
 							<p className="login-hint">
 								Demo: <strong>demo</strong> / <strong>demo123</strong> or{" "}
 								<strong>admin</strong> / <strong>admin123</strong>
-							</p>
+							</p> */}
 							<form className="login-form" onSubmit={handleLogin}>
 								<label>
 									Username
