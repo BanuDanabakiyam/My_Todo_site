@@ -2,9 +2,50 @@ import { useMemo, useState, useEffect } from "react";
 import "./App.css";
 import todoBG from "../src/assets/nature.jpeg";
 
+const VALID_USERS = [
+	{ username: "demo", password: "demo123" },
+	{ username: "admin", password: "admin123" },
+];
+
+const USER_STORAGE_KEY = "todoAppUser";
+
+const getTodosStorageKey = (username) => `todoAppTodos_${username}`;
+
+const loadUserFromStorage = () => {
+	try {
+		const saved = localStorage.getItem(USER_STORAGE_KEY);
+		if (!saved) return null;
+		const parsed = JSON.parse(saved);
+		if (parsed?.username) return { username: parsed.username };
+	} catch {
+		/* ignore invalid storage */
+	}
+	return null;
+};
+
+const loadTodosForUser = (username) => {
+	try {
+		const saved = localStorage.getItem(getTodosStorageKey(username));
+		if (!saved) return [];
+		const parsed = JSON.parse(saved);
+		return Array.isArray(parsed) ? parsed : [];
+	} catch {
+		/* ignore invalid storage */
+	}
+	return [];
+};
+
 function App() {
+	const [user, setUser] = useState(() => loadUserFromStorage());
+	const [showLoginModal, setShowLoginModal] = useState(false);
+	const [loginUsername, setLoginUsername] = useState("");
+	const [loginPassword, setLoginPassword] = useState("");
+	const [loginError, setLoginError] = useState("");
 	const [taskInput, setTaskInput] = useState("");
-	const [todos, setTodos] = useState([]);
+	const [todos, setTodos] = useState(() => {
+		const savedUser = loadUserFromStorage();
+		return savedUser ? loadTodosForUser(savedUser.username) : [];
+	});
 	const [deletingTodoId, setDeletingTodoId] = useState(null);
 	const [formError, setFormError] = useState("");
 	const [editingTodoId, setEditingTodoId] = useState(null);
@@ -142,6 +183,64 @@ function App() {
 		setShowDeleteAllModal(false);
 	};
 
+	const handleOpenLoginModal = () => {
+		setLoginError("");
+		setShowLoginModal(true);
+	};
+
+	const handleCancelLogin = () => {
+		setShowLoginModal(false);
+		setLoginUsername("");
+		setLoginPassword("");
+		setLoginError("");
+	};
+
+	const handleLogin = (event) => {
+		event.preventDefault();
+		const username = loginUsername.trim();
+		const password = loginPassword;
+
+		if (!username || !password) {
+			setLoginError("Username and password are required.");
+			return;
+		}
+
+		const match = VALID_USERS.find(
+			(validUser) =>
+				validUser.username === username && validUser.password === password,
+		);
+
+		if (!match) {
+			setLoginError("Invalid username or password.");
+			return;
+		}
+
+		setUser({ username: match.username });
+		setTodos(loadTodosForUser(match.username));
+		setShowLoginModal(false);
+		setLoginUsername("");
+		setLoginPassword("");
+		setLoginError("");
+	};
+
+	const handleLogout = () => {
+		if (user) {
+			localStorage.setItem(
+				getTodosStorageKey(user.username),
+				JSON.stringify(todos),
+			);
+		}
+		setUser(null);
+		setTodos([]);
+		setTaskInput("");
+		setFormError("");
+		setEditingTodoId(null);
+		setEditInput("");
+		setEditError("");
+		setShowDeleteAllModal(false);
+		setShowLoginModal(false);
+	};
+
 	const handleStartEditTodo = (todo) => {
 		setEditingTodoId(todo.id);
 		setEditInput(todo.text);
@@ -198,6 +297,22 @@ function App() {
 	}, [todos, completedCount, notCompletedCount]);
 
 	useEffect(() => {
+		if (user) {
+			localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+		} else {
+			localStorage.removeItem(USER_STORAGE_KEY);
+		}
+	}, [user]);
+
+	useEffect(() => {
+		if (!user) return;
+		localStorage.setItem(
+			getTodosStorageKey(user.username),
+			JSON.stringify(todos),
+		);
+	}, [todos, user]);
+
+	useEffect(() => {
 		// #region agent log
 		debugLog({
 			hypothesisId: "H5",
@@ -224,22 +339,51 @@ function App() {
 			<div className="todo-app">
 				<div className="todo-header">
 					<h1>My Todo List</h1>
-					{todos.length > 0 ? (
-						<button
-							type="button"
-							className="delete-all-btn"
-							onClick={handleOpenDeleteAllModal}
-						>
-							Delete All
-						</button>
-					) : null}
+					<div className="header-actions">
+						{user ? (
+							<>
+								<span className="user-greeting">Hi, {user.username}</span>
+								<button
+									type="button"
+									className="logout-btn"
+									onClick={handleLogout}
+								>
+									Logout
+								</button>
+								{todos.length > 0 ? (
+									<button
+										type="button"
+										className="delete-all-btn"
+										onClick={handleOpenDeleteAllModal}
+									>
+										Delete All
+									</button>
+								) : null}
+							</>
+						) : (
+							<button
+								type="button"
+								className="login-btn"
+								onClick={handleOpenLoginModal}
+							>
+								Login
+							</button>
+						)}
+					</div>
 				</div>
 				<p className="subtitle">Plan your day, one task at a time.</p>
+
+				{!user ? (
+					<p className="login-prompt">
+						Please log in to add and manage your todos.
+					</p>
+				) : null}
 
 				<form className="todo-form" onSubmit={handleAddTodo}>
 					<input
 						type="text"
 						value={taskInput}
+						disabled={!user}
 						onChange={(event) => {
 							setTaskInput(event.target.value);
 							if (formError) setFormError("");
@@ -247,10 +391,14 @@ function App() {
 						placeholder="Add a new todo..."
 						aria-label="Todo task"
 					/>
-					<button type="submit">Add</button>
+					<button type="submit" disabled={!user}>
+						Add
+					</button>
 				</form>
 				{formError ? <p className="form-error">{formError}</p> : null}
 
+				{user ? (
+				<>
 				<section className="todo-meta">
 					<span>Total: {todos.length}</span>
 					<span>Completed: {completedCount}</span>
@@ -327,6 +475,73 @@ function App() {
 					)}
 				</ul>
 				{editError ? <p className="form-error">{editError}</p> : null}
+				</>
+				) : null}
+
+				{showLoginModal ? (
+					<div
+						className="modal-overlay"
+						role="presentation"
+						onClick={handleCancelLogin}
+					>
+						<div
+							className="modal-dialog login-modal"
+							role="dialog"
+							aria-modal="true"
+							aria-labelledby="login-modal-title"
+							onClick={(event) => event.stopPropagation()}
+						>
+							<h2 id="login-modal-title">Log in</h2>
+							<p className="login-hint">
+								Demo: <strong>demo</strong> / <strong>demo123</strong> or{" "}
+								<strong>admin</strong> / <strong>admin123</strong>
+							</p>
+							<form className="login-form" onSubmit={handleLogin}>
+								<label>
+									Username
+									<input
+										type="text"
+										value={loginUsername}
+										onChange={(event) => {
+											setLoginUsername(event.target.value);
+											if (loginError) setLoginError("");
+										}}
+										autoComplete="username"
+										placeholder="Enter username"
+									/>
+								</label>
+								<label>
+									Password
+									<input
+										type="password"
+										value={loginPassword}
+										onChange={(event) => {
+											setLoginPassword(event.target.value);
+											if (loginError) setLoginError("");
+										}}
+										autoComplete="current-password"
+										placeholder="Enter password"
+									/>
+								</label>
+								{loginError ? (
+									<p className="form-error login-form-error">{loginError}</p>
+								) : null}
+								<div className="modal-actions">
+									<button type="submit" className="modal-btn-login">
+										Login
+									</button>
+									<button
+										type="button"
+										className="modal-btn-no"
+										onClick={handleCancelLogin}
+									>
+										Cancel
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				) : null}
 
 				{showDeleteAllModal ? (
 					<div

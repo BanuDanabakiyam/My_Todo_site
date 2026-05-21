@@ -39,6 +39,44 @@ h1 {
 	gap: 0.75rem;
 }
 
+.header-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+.user-greeting {
+	color: #d6cab8;
+	font-family: "Finlandica Headline", sans-serif;
+	font-size: 0.95rem;
+}
+
+.login-btn,
+.logout-btn {
+	border: none;
+	border-radius: 8px;
+	padding: 0.6rem 0.9rem;
+	cursor: pointer;
+	color: #ffffff;
+}
+
+.login-btn {
+	background: #228b22;
+}
+
+.logout-btn {
+	background: #64748b;
+}
+
+.login-prompt {
+	margin: 0 0 1rem;
+	color: #d6cab8;
+	font-family: "Finlandica Headline", sans-serif;
+	text-align: center;
+}
+
 .subtitle {
 	margin: 0.5rem 0 1.25rem;
 	color: white;
@@ -254,6 +292,58 @@ h1 {
 .modal-btn-no {
 	background: #e2e8f0;
 	color: #1e293b;
+}
+
+.login-modal .login-hint {
+	margin: 0 0 1rem;
+	font-size: 0.9rem;
+}
+
+.login-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+}
+
+.login-form label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	color: #334155;
+	font-size: 0.9rem;
+	font-weight: 500;
+}
+
+.login-form input {
+	padding: 0.65rem 0.85rem;
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	font-size: 12px;
+	outline: none;
+}
+
+.login-form input:focus {
+	border-color: #228b22;
+}
+
+.login-form-error {
+	margin: 0;
+}
+
+.modal-btn-login {
+	border: none;
+	border-radius: 8px;
+	padding: 0.65rem 1rem;
+	font-size: 0.95rem;
+	cursor: pointer;
+	background: #228b22;
+	color: #ffffff;
+}
+
+.todo-form button:disabled,
+.todo-form input:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 @media (min-width: 400px) {
