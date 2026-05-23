@@ -3,7 +3,7 @@ import { OrbitProgress } from "react-loading-indicators";
 import "./App.css";
 import todoBG from "../src/assets/nature.jpeg";
 
-const VALID_USERS = [{ username: "admin", password: "12345" }];
+const API_BASE_URL = "http://localhost:3000";
 
 const USER_STORAGE_KEY = "todoAppUser";
 
@@ -12,6 +12,7 @@ const getTodosStorageKey = (username) => `todoAppTodos_${username}`;
 const loadUserFromStorage = () => {
 	try {
 		const saved = localStorage.getItem(USER_STORAGE_KEY);
+		console.log("SAVED", saved);
 		if (!saved) return null;
 		const parsed = JSON.parse(saved);
 		if (parsed?.username) return { username: parsed.username };
@@ -34,7 +35,7 @@ const loadTodosForUser = (username) => {
 };
 
 function App() {
-	const [user, setUser] = useState(() => loadUserFromStorage());
+	const [user, setUser] = useState();
 	const [showLoginModal, setShowLoginModal] = useState(false);
 	const [isLoginLoading, setIsLoginLoading] = useState(false);
 	const [pendingLoginUsername, setPendingLoginUsername] = useState(null);
@@ -59,22 +60,33 @@ function App() {
 		return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 	};
 
-	const debugLog = (payload) => {
-		fetch("http://127.0.0.1:7917/ingest/07f7972e-9c91-4b19-a09d-b566832d3346", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"X-Debug-Session-Id": "67f5a1",
-			},
-			body: JSON.stringify({
-				sessionId: "67f5a1",
-				runId: "initial-debug",
-				timestamp: Date.now(),
-				...payload,
-			}),
-		}).catch(() => {});
-	};
+	// const debugLog = async (payload) => {
+	// 	console.log("INSIDE");
+	// 	try {
+	// 		const response = await fetch(
+	// 			"http://127.0.0.1:7917/ingest/07f7972e-9c91-4b19-a09d-b566832d3346",
+	// 			{
+	// 				method: "POST",
+	// 				headers: {
+	// 					"Content-Type": "application/json",
+	// 					"X-Debug-Session-Id": "67f5a1",
+	// 				},
+	// 				body: JSON.stringify({
+	// 					timestamp: Date.now(),
+	// 					...payload,
+	// 				}),
+	// 			},
+	// 		);
 
+	// 		console.log("response object:", response);
+
+	// 		const data = await response.json();
+
+	// 		console.log("response data:", data);
+	// 	} catch (error) {
+	// 		console.log("error:", error);
+	// 	}
+	// };
 	const completedCount = useMemo(
 		() => todos.filter((todo) => todo.completed).length,
 		[todos],
@@ -89,12 +101,12 @@ function App() {
 		const trimmedTask = taskInput.trim();
 		const formattedTask = formatTaskText(trimmedTask);
 		// #region agent log
-		debugLog({
-			hypothesisId: "H1",
-			location: "src/App.jsx:36",
-			message: "Add todo submit received",
-			data: { taskInput, trimmedTaskLength: trimmedTask.length },
-		});
+		// debugLog({
+		// 	hypothesisId: "H1",
+		// 	location: "src/App.jsx:36",
+		// 	message: "Add todo submit received",
+		// 	data: { taskInput, trimmedTaskLength: trimmedTask.length },
+		// });
 		// #endregion
 
 		if (!formattedTask) {
@@ -112,12 +124,12 @@ function App() {
 		}
 
 		// #region agent log
-		debugLog({
-			hypothesisId: "H2",
-			location: "src/App.jsx:47",
-			message: "Attempting todo id creation",
-			data: { cryptoAvailable: typeof crypto !== "undefined" },
-		});
+		// debugLog({
+		// 	hypothesisId: "H2",
+		// 	location: "src/App.jsx:47",
+		// 	message: "Attempting todo id creation",
+		// 	data: { cryptoAvailable: typeof crypto !== "undefined" },
+		// });
 		// #endregion
 		const newTodo = {
 			id: crypto.randomUUID(),
@@ -132,12 +144,12 @@ function App() {
 
 	const handleToggleTodo = (todoId) => {
 		// #region agent log
-		debugLog({
-			hypothesisId: "H3",
-			location: "src/App.jsx:61",
-			message: "Toggle requested",
-			data: { todoId },
-		});
+		// debugLog({
+		// 	hypothesisId: "H3",
+		// 	location: "src/App.jsx:61",
+		// 	message: "Toggle requested",
+		// 	data: { todoId },
+		// });
 		// #endregion
 		setTodos((currentTodos) =>
 			currentTodos.map((todo) =>
@@ -149,12 +161,12 @@ function App() {
 	const handleDeleteTodo = (todoId) => {
 		if (deletingTodoId === todoId) return;
 		// #region agent log
-		debugLog({
-			hypothesisId: "H3",
-			location: "src/App.jsx:74",
-			message: "Delete requested",
-			data: { todoId },
-		});
+		// debugLog({
+		// 	hypothesisId: "H3",
+		// 	location: "src/App.jsx:74",
+		// 	message: "Delete requested",
+		// 	data: { todoId },
+		// });
 		// #endregion
 		setDeletingTodoId(todoId);
 
@@ -195,7 +207,7 @@ function App() {
 		setLoginError("");
 	};
 
-	const handleLogin = (event) => {
+	const handleLogin = async (event) => {
 		event.preventDefault();
 		const username = loginUsername.trim();
 		const password = loginPassword;
@@ -205,22 +217,32 @@ function App() {
 			return;
 		}
 
-		const match = VALID_USERS.find(
-			(validUser) =>
-				validUser.username === username && validUser.password === password,
-		);
+		try {
+			const response = await fetch(`${API_BASE_URL}/validateUser`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ username, password }),
+			});
 
-		if (!match) {
-			setLoginError("Invalid username or password.");
-			return;
+			const data = await response.json();
+			console.log("data", data);
+
+			if (!response.ok || !data.success) {
+				setLoginError(data.message || "Invalid username or password.");
+				return;
+			}
+
+			setShowLoginModal(false);
+			setLoginUsername("");
+			setLoginPassword("");
+			setIsLoginLoading(true);
+			setPendingLoginUsername(username);
+			setLoginError("");
+		} catch {
+			setLoginError(
+				"Could not reach server. Start the backend with npm start in the backend folder.",
+			);
 		}
-
-		setShowLoginModal(false);
-		setLoginUsername("");
-		setLoginPassword("");
-		setIsLoginLoading(true);
-		setPendingLoginUsername(match.username);
-		setLoginError("");
 	};
 
 	useEffect(() => {
@@ -295,21 +317,21 @@ function App() {
 		handleCancelEditTodo();
 	};
 
-	useEffect(() => {
-		// #region agent log
-		debugLog({
-			hypothesisId: "H4",
-			location: "src/App.jsx:81",
-			message: "Todo state and counters recomputed",
-			data: {
-				total: todos.length,
-				completedCount,
-				notCompletedCount,
-				ids: todos.map((todo) => todo.id),
-			},
-		});
-		// #endregion
-	}, [todos, completedCount, notCompletedCount]);
+	// useEffect(() => {
+	// 	// #region agent log
+	// 	debugLog({
+	// 		hypothesisId: "H4",
+	// 		location: "src/App.jsx:81",
+	// 		message: "Todo state and counters recomputed",
+	// 		data: {
+	// 			total: todos.length,
+	// 			completedCount,
+	// 			notCompletedCount,
+	// 			ids: todos.map((todo) => todo.id),
+	// 		},
+	// 	});
+	// 	// #endregion
+	// }, [todos, completedCount, notCompletedCount]);
 
 	useEffect(() => {
 		if (user) {
@@ -327,27 +349,27 @@ function App() {
 		);
 	}, [todos, user]);
 
-	useEffect(() => {
-		// #region agent log
-		debugLog({
-			hypothesisId: "H5",
-			location: "src/App.jsx:111",
-			message: "App mounted instrumentation probe",
-			data: { userAgent: navigator.userAgent.slice(0, 80) },
-		});
-		// #endregion
-	}, []);
+	// useEffect(() => {
+	// 	// #region agent log
+	// 	debugLog({
+	// 		hypothesisId: "H5",
+	// 		location: "src/App.jsx:111",
+	// 		message: "App mounted instrumentation probe",
+	// 		data: { userAgent: navigator.userAgent.slice(0, 80) },
+	// 	});
+	// 	// #endregion
+	// }, []);
 
-	useEffect(() => {
-		// #region agent log
-		debugLog({
-			hypothesisId: "H6",
-			location: "src/App.jsx:122",
-			message: "Task input changed",
-			data: { taskInputLength: taskInput.length },
-		});
-		// #endregion
-	}, [taskInput]);
+	// useEffect(() => {
+	// 	// #region agent log
+	// 	debugLog({
+	// 		hypothesisId: "H6",
+	// 		location: "src/App.jsx:122",
+	// 		message: "Task input changed",
+	// 		data: { taskInputLength: taskInput.length },
+	// 	});
+	// 	// #endregion
+	// }, [taskInput]);
 
 	return (
 		<div className="app-shell" style={{ backgroundImage: `url(${todoBG})` }}>
@@ -537,7 +559,7 @@ function App() {
 								) : null}
 								<div className="modal-actions">
 									<button type="submit" className="modal-btn-login">
-										Login
+										Ok
 									</button>
 									<button
 										type="button"
@@ -559,12 +581,7 @@ function App() {
 						aria-live="polite"
 						aria-label="Signing in"
 					>
-						<OrbitProgress
-							color="#32cd32"
-							size="small"
-							text=""
-							textColor=""
-						/>
+						<OrbitProgress color="#32cd32" size="small" text="" textColor="" />
 					</div>
 				) : null}
 
