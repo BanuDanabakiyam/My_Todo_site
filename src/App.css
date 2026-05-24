@@ -98,6 +98,7 @@ h1 {
 .todo-form {
 	display: flex;
 	gap: 0.75rem;
+	margin-bottom: 20px;
 }
 
 .todo-form input {
@@ -142,6 +143,11 @@ h1 {
 	display: flex;
 	justify-content: center;
 	align-items: flex-end;
+}
+
+.save:disabled {
+	cursor: default;
+	opacity: 0.6;
 }
 
 .form-error {

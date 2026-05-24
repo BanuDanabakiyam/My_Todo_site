@@ -581,7 +581,7 @@ function App() {
 					</>
 				) : null}
 				<div className="save_item">
-					<button type="save" disabled={!user} className="save">
+					<button type="button" disabled={!user} className="save">
 						Save
 					</button>
 				</div>
