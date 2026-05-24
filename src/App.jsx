@@ -580,6 +580,11 @@ function App() {
 						{editError ? <p className="form-error">{editError}</p> : null}
 					</>
 				) : null}
+				<div className="save_item">
+					<button type="save" disabled={!user} className="save">
+						Save
+					</button>
+				</div>
 
 				{showLoginModal ? (
 					<div

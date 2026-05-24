@@ -124,6 +124,25 @@ h1 {
 	padding: 0.7rem 0.95rem;
 	cursor: pointer;
 }
+.save_item {
+	width: 100%;
+	height: auto;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.save {
+	border: none;
+	border-radius: 8px;
+	background: #228b22;
+	color: #ffffff;
+	padding: 0.7rem 0.95rem;
+	cursor: pointer;
+	width: 60px;
+	display: flex;
+	justify-content: center;
+	align-items: flex-end;
+}
 
 .form-error {
 	margin: 0.5rem 0 0;
@@ -162,6 +181,7 @@ h1 {
 	min-height: 0;
 	overflow-y: auto;
 	padding-right: 0.25rem;
+	margin-bottom: 20px;
 }
 
 .todo-item {
@@ -173,6 +193,7 @@ h1 {
 	padding: 0.75rem;
 	border: 1px solid #e2e8f0;
 	border-radius: 8px;
+	margin-bottom: 20px;
 }
 
 .todo-item label {

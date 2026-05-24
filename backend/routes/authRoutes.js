@@ -107,4 +107,33 @@ router.post("/signup", async (req, res) => {
 		});
 	}
 });
+
+router.post("/saveTodos", async (req, res) => {
+	try {
+		console.log("saveTodos endpoint started here...");
+		const { username, todos } = req.body;
+
+		await ddbDocClient.send(
+			new PutCommand({
+				TableName: "user_todos",
+				Item: {
+					username,
+					todos,
+				},
+			}),
+		);
+
+		res.status(200).json({
+			success: true,
+			message: "Todos saved successfully",
+		});
+	} catch (error) {
+		console.log(error);
+
+		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+});
 module.exports = router;
