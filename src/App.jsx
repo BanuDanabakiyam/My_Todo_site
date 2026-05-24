@@ -402,6 +402,52 @@ function App() {
 			JSON.stringify(todos),
 		);
 	}, [todos, user]);
+	const handleSaveTodos = async () => {
+		if (!user) return;
+
+		try {
+			const response = await fetch(`${API_BASE_URL}/saveTodos`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					username: user.username,
+					todos: todos,
+				}),
+			});
+
+			const data = await response.json();
+
+			if (data.success) {
+				console.log("Todos saved successfully");
+			} else {
+				console.log(data.message);
+			}
+		} catch (error) {
+			console.log(error);
+		}
+	};
+	const fetchTodos = async () => {
+		if (!user) return;
+
+		try {
+			const response = await fetch(`${API_BASE_URL}/getTodos/${user.username}`);
+
+			const data = await response.json();
+
+			if (data.success) {
+				setTodos(data.todos || []);
+			}
+		} catch (error) {
+			console.log(error);
+		}
+	};
+	useEffect(() => {
+		if (user) {
+			fetchTodos();
+		}
+	}, [user]);
 
 	// useEffect(() => {
 	// 	// #region agent log
@@ -435,16 +481,6 @@ function App() {
 						<button type="button" className="logout-btn" onClick={handleLogout}>
 							Logout
 						</button>
-
-						{todos.length > 0 ? (
-							<button
-								type="button"
-								className="delete-all-btn"
-								onClick={handleOpenDeleteAllModal}
-							>
-								Delete All
-							</button>
-						) : null}
 					</>
 				) : (
 					<>
@@ -470,6 +506,17 @@ function App() {
 			<div className="todo-app">
 				<div className="todo-header">
 					<h1>My Todo List</h1>
+					<div>
+						{todos.length > 0 ? (
+							<button
+								type="button"
+								className="delete-all-btn"
+								onClick={handleOpenDeleteAllModal}
+							>
+								Delete All
+							</button>
+						) : null}
+					</div>
 				</div>
 				<p className="subtitle">Plan your day, one task at a time.</p>
 
@@ -581,7 +628,12 @@ function App() {
 					</>
 				) : null}
 				<div className="save_item">
-					<button type="button" disabled={!user} className="save">
+					<button
+						type="button"
+						disabled={!user}
+						className="save"
+						onClick={handleSaveTodos}
+					>
 						Save
 					</button>
 				</div>

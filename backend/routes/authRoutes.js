@@ -136,4 +136,32 @@ router.post("/saveTodos", async (req, res) => {
 		});
 	}
 });
+
+router.get("/getTodos/:username", async (req, res) => {
+	try {
+		console.log("getTodos endpoint started here...");
+		const { username } = req.params;
+
+		const response = await ddbDocClient.send(
+			new GetCommand({
+				TableName: "user_todos",
+				Key: {
+					username,
+				},
+			}),
+		);
+
+		res.status(200).json({
+			success: true,
+			todos: response.Item?.todos || [],
+		});
+	} catch (error) {
+		console.log(error);
+
+		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+});
 module.exports = router;
