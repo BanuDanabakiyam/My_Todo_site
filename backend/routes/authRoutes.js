@@ -11,34 +11,46 @@ const ddbDocClient = DynamoDBDocumentClient.from(awsClient);
 
 router.post("/validateUser", async (req, res) => {
 	console.log("validateUser endpoint started here....");
+
 	try {
 		const { username, password } = req.body;
 
-		if (username === "admin" && password === "1234") {
-			const token = jwt.sign({ username }, process.env.JWT_SECRET, {
-				expiresIn: "1h",
-			});
+		const userData = await ddbDocClient.send(
+			new GetCommand({
+				TableName: "users",
+				Key: {
+					username,
+				},
+			}),
+		);
 
-			await ddbDocClient.send(
-				new PutCommand({
-					TableName: "user_sessions",
-					Item: {
-						username,
-						token,
-						loginTime: new Date().toISOString(),
-					},
-				}),
-			);
-
-			return res.status(200).json({
-				success: true,
-				token,
+		if (!userData.Item || userData.Item.password !== password) {
+			return res.status(401).json({
+				success: false,
+				message: "Invalid credentials",
 			});
 		}
 
-		res.status(401).json({
-			success: false,
-			message: "Invalid credentials",
+		// GENERATE JWT TOKEN
+		const token = jwt.sign({ username }, process.env.JWT_SECRET, {
+			expiresIn: "1h",
+		});
+
+		// STORE SESSION
+		await ddbDocClient.send(
+			new PutCommand({
+				TableName: "user_sessions",
+				Item: {
+					username,
+					token,
+					loginTime: new Date().toISOString(),
+				},
+			}),
+		);
+
+		return res.status(200).json({
+			success: true,
+			token,
 		});
 	} catch (error) {
 		console.log(error);
@@ -49,9 +61,9 @@ router.post("/validateUser", async (req, res) => {
 		});
 	}
 });
-
 router.post("/signup", async (req, res) => {
 	try {
+		console.log("signup endpoint started....");
 		const { username, password } = req.body;
 
 		// check user already exists

@@ -37,7 +37,10 @@ const loadTodosForUser = (username) => {
 function App() {
 	const [user, setUser] = useState();
 	const [showLoginModal, setShowLoginModal] = useState(false);
+	const [showSignUpModal, setShowSignUpModal] = useState(false);
 	const [isLoginLoading, setIsLoginLoading] = useState(false);
+	const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+
 	const [pendingLoginUsername, setPendingLoginUsername] = useState(null);
 	const [loginUsername, setLoginUsername] = useState("");
 	const [loginPassword, setLoginPassword] = useState("");
@@ -199,9 +202,15 @@ function App() {
 		setLoginError("");
 		setShowLoginModal(true);
 	};
+	const handleOpenSignupModal = () => {
+		setLoginError("");
+		setShowLoginModal(false);
+		setShowSignUpModal(true);
+	};
 
 	const handleCancelLogin = () => {
 		setShowLoginModal(false);
+		setShowSignUpModal(false);
 		setLoginUsername("");
 		setLoginPassword("");
 		setLoginError("");
@@ -238,10 +247,45 @@ function App() {
 			setIsLoginLoading(true);
 			setPendingLoginUsername(username);
 			setLoginError("");
-		} catch {
-			setLoginError(
-				"Could not reach server. Start the backend with npm start in the backend folder.",
-			);
+		} catch (err) {
+			setLoginError("Could not reach server", err);
+		}
+	};
+
+	const handleSignUp = async (event) => {
+		event.preventDefault();
+		const username = loginUsername.trim();
+		const password = loginPassword;
+
+		if (!username || !password) {
+			setLoginError("Username and password are required.");
+			return;
+		}
+
+		try {
+			const response = await fetch(`${API_BASE_URL}/signup`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ username, password }),
+			});
+
+			const data = await response.json();
+			console.log("data", data);
+
+			if (!response.ok || !data.success) {
+				setLoginError(data.message || "Invalid username or password.");
+				return;
+			}
+
+			setShowLoginModal(false);
+			setShowSignUpModal(false);
+			setLoginUsername("");
+			setLoginPassword("");
+			setIsLogoutLoading(true);
+			setPendingLoginUsername(username);
+			setLoginError("");
+		} catch (err) {
+			setLoginError("Could not reach server", err);
 		}
 	};
 
@@ -257,6 +301,15 @@ function App() {
 
 		return () => window.clearTimeout(timer);
 	}, [isLoginLoading, pendingLoginUsername]);
+
+	useEffect(() => {
+		if (!isLogoutLoading) return;
+		const timer = window.setTimeout(() => {
+			setIsLogoutLoading(false);
+		}, 2000);
+
+		return () => window.clearTimeout(timer);
+	}, [isLogoutLoading]);
 
 	const handleLogout = () => {
 		if (user) {
@@ -275,6 +328,7 @@ function App() {
 		setShowDeleteAllModal(false);
 		setShowLoginModal(false);
 		setIsLoginLoading(false);
+		setIsLogoutLoading(true);
 		setPendingLoginUsername(null);
 	};
 
@@ -377,9 +431,11 @@ function App() {
 				{user ? (
 					<>
 						<span className="user-greeting">Hi, {user.username}</span>
+
 						<button type="button" className="logout-btn" onClick={handleLogout}>
 							Logout
 						</button>
+
 						{todos.length > 0 ? (
 							<button
 								type="button"
@@ -391,15 +447,26 @@ function App() {
 						) : null}
 					</>
 				) : (
-					<button
-						type="button"
-						className="login-btn"
-						onClick={handleOpenLoginModal}
-					>
-						Login
-					</button>
+					<>
+						<button
+							type="button"
+							className="signup-btn"
+							onClick={handleOpenSignupModal}
+						>
+							Signup
+						</button>
+
+						<button
+							type="button"
+							className="login-btn"
+							onClick={handleOpenLoginModal}
+						>
+							Login
+						</button>
+					</>
 				)}
 			</div>
+
 			<div className="todo-app">
 				<div className="todo-header">
 					<h1>My Todo List</h1>
@@ -574,7 +641,78 @@ function App() {
 					</div>
 				) : null}
 
+				{showSignUpModal ? (
+					<div
+						className="modal-overlay"
+						role="presentation"
+						onClick={handleCancelLogin}
+					>
+						<div
+							className="modal-dialog login-modal"
+							role="dialog"
+							aria-modal="true"
+							aria-labelledby="login-modal-title"
+							onClick={(event) => event.stopPropagation()}
+						>
+							<form className="login-form" onSubmit={handleSignUp}>
+								<label>
+									Username
+									<input
+										type="text"
+										value={loginUsername}
+										onChange={(event) => {
+											setLoginUsername(event.target.value);
+											if (loginError) setLoginError("");
+										}}
+										autoComplete="username"
+										placeholder="Enter username"
+									/>
+								</label>
+								<label>
+									Password
+									<input
+										type="password"
+										value={loginPassword}
+										onChange={(event) => {
+											setLoginPassword(event.target.value);
+											if (loginError) setLoginError("");
+										}}
+										autoComplete="current-password"
+										placeholder="Enter password"
+									/>
+								</label>
+								{loginError ? (
+									<p className="form-error login-form-error">{loginError}</p>
+								) : null}
+								<div className="modal-actions">
+									<button type="submit" className="modal-btn-login">
+										Ok
+									</button>
+									<button
+										type="button"
+										className="modal-btn-no"
+										onClick={handleCancelLogin}
+									>
+										Cancel
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				) : null}
+
 				{isLoginLoading ? (
+					<div
+						className="login-loading-overlay"
+						role="status"
+						aria-live="polite"
+						aria-label="Signing in"
+					>
+						<OrbitProgress color="#32cd32" size="small" text="" textColor="" />
+					</div>
+				) : null}
+
+				{isLogoutLoading ? (
 					<div
 						className="login-loading-overlay"
 						role="status"

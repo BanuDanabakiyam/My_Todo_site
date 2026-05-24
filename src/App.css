@@ -58,7 +58,8 @@ h1 {
 }
 
 .login-btn,
-.logout-btn {
+.logout-btn,
+.signup-btn {
 	border: none;
 	border-radius: 8px;
 	padding: 0.6rem 0.9rem;
@@ -68,6 +69,10 @@ h1 {
 
 .login-btn {
 	background: #228b22;
+}
+.signup-btn {
+	background: #7f7f7f;
+	color: white;
 }
 
 .logout-btn {
