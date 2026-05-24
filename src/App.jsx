@@ -40,6 +40,7 @@ function App() {
 	const [showSignUpModal, setShowSignUpModal] = useState(false);
 	const [isLoginLoading, setIsLoginLoading] = useState(false);
 	const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
 
 	const [pendingLoginUsername, setPendingLoginUsername] = useState(null);
 	const [loginUsername, setLoginUsername] = useState("");
@@ -404,6 +405,7 @@ function App() {
 	}, [todos, user]);
 	const handleSaveTodos = async () => {
 		if (!user) return;
+		setIsSaving(true);
 
 		try {
 			const response = await fetch(`${API_BASE_URL}/saveTodos`, {
@@ -420,8 +422,10 @@ function App() {
 			const data = await response.json();
 
 			if (data.success) {
+				setIsSaving(false);
 				console.log("Todos saved successfully");
 			} else {
+				setIsSaving(true);
 				console.log(data.message);
 			}
 		} catch (error) {
@@ -759,6 +763,17 @@ function App() {
 				) : null}
 
 				{isLoginLoading ? (
+					<div
+						className="login-loading-overlay"
+						role="status"
+						aria-live="polite"
+						aria-label="Signing in"
+					>
+						<OrbitProgress color="#32cd32" size="small" text="" textColor="" />
+					</div>
+				) : null}
+
+				{isSaving ? (
 					<div
 						className="login-loading-overlay"
 						role="status"
