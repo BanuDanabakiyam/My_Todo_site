@@ -1,7 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
-const { GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, ScanCommand } = require("@aws-sdk/lib-dynamodb");
 
 const awsClient = require("../config/aws");
 
@@ -9,27 +9,77 @@ const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
 
 const ddbDocClient = DynamoDBDocumentClient.from(awsClient);
 
+const isValidEmail = (email) =>
+	/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const validateLoginInput = (email, password) => {
+	if (!email || !password) {
+		return "Email and password are required.";
+	}
+	if (!isValidEmail(email)) {
+		return "Please enter a valid email address.";
+	}
+	if (password.length < 8) {
+		return "Password must be at least 8 characters.";
+	}
+	return null;
+};
+
+const validateSignupInput = (username, email, password) => {
+	if (!username || !email || !password) {
+		return "Username, email, and password are required.";
+	}
+	if (username.trim().length < 3) {
+		return "Username must be at least 3 characters.";
+	}
+	if (!isValidEmail(email)) {
+		return "Please enter a valid email address.";
+	}
+	if (password.length < 8) {
+		return "Password must be at least 8 characters.";
+	}
+	return null;
+};
+
+const findUserByEmail = async (email) => {
+	const normalizedEmail = email.toLowerCase();
+	const result = await ddbDocClient.send(
+		new ScanCommand({
+			TableName: "users",
+			FilterExpression: "email = :email OR username = :email",
+			ExpressionAttributeValues: {
+				":email": normalizedEmail,
+			},
+		}),
+	);
+	return result.Items?.[0] ?? null;
+};
+
 router.post("/validateUser", async (req, res) => {
 	console.log("validateUser endpoint started here....");
 
 	try {
-		const { username, password } = req.body;
+		const { email, password } = req.body;
+		const normalizedEmail = email?.trim().toLowerCase();
+		const validationError = validateLoginInput(normalizedEmail, password);
 
-		const userData = await ddbDocClient.send(
-			new GetCommand({
-				TableName: "users",
-				Key: {
-					username,
-				},
-			}),
-		);
+		if (validationError) {
+			return res.status(400).json({
+				success: false,
+				message: validationError,
+			});
+		}
 
-		if (!userData.Item || userData.Item.password !== password) {
+		const user = await findUserByEmail(normalizedEmail);
+
+		if (!user || user.password !== password) {
 			return res.status(401).json({
 				success: false,
 				message: "Invalid credentials",
 			});
 		}
+
+		const { username } = user;
 
 		// GENERATE JWT TOKEN
 		const token = jwt.sign({ username }, process.env.JWT_SECRET, {
@@ -51,6 +101,8 @@ router.post("/validateUser", async (req, res) => {
 		return res.status(200).json({
 			success: true,
 			token,
+			username,
+			email: user.email,
 		});
 	} catch (error) {
 		console.log(error);
@@ -64,14 +116,28 @@ router.post("/validateUser", async (req, res) => {
 router.post("/signup", async (req, res) => {
 	try {
 		console.log("signup endpoint started....");
-		const { username, password } = req.body;
+		const { username, email, password } = req.body;
+		const normalizedUsername = username?.trim();
+		const normalizedEmail = email?.trim().toLowerCase();
+		const validationError = validateSignupInput(
+			normalizedUsername,
+			normalizedEmail,
+			password,
+		);
 
-		// check user already exists
+		if (validationError) {
+			return res.status(400).json({
+				success: false,
+				message: validationError,
+			});
+		}
+
+		// check username already exists
 		const existingUser = await ddbDocClient.send(
 			new GetCommand({
 				TableName: "users",
 				Key: {
-					username,
+					username: normalizedUsername,
 				},
 			}),
 		);
@@ -79,7 +145,16 @@ router.post("/signup", async (req, res) => {
 		if (existingUser.Item) {
 			return res.status(400).json({
 				success: false,
-				message: "User already exists",
+				message: "Username already exists",
+			});
+		}
+
+		const existingEmailUser = await findUserByEmail(normalizedEmail);
+
+		if (existingEmailUser) {
+			return res.status(400).json({
+				success: false,
+				message: "Email already registered",
 			});
 		}
 
@@ -88,7 +163,8 @@ router.post("/signup", async (req, res) => {
 			new PutCommand({
 				TableName: "users",
 				Item: {
-					username,
+					username: normalizedUsername,
+					email: normalizedEmail,
 					password,
 				},
 			}),

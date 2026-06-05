@@ -99,16 +99,58 @@ h1 {
 .todo-form {
 	display: flex;
 	gap: 0.75rem;
-	margin-bottom: 20px;
+	margin-bottom: 5px;
+	align-items: flex-end;
 }
 
-.todo-form input {
+.todo-form-fields {
 	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	min-width: 0;
+}
+
+.todo-input-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.todo-input-error {
+	margin: 0;
+}
+
+.todo-form input[type="text"],
+.todo-form input[type="time"] {
 	padding: 0.7rem 0.9rem;
 	border: 1px solid #cbd5e1;
 	border-radius: 8px;
 	font-size: 1rem;
 	outline: none;
+}
+
+.todo-form input[type="text"] {
+	width: 100%;
+}
+
+.time-inputs {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.time-input-label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	color: #d6cab8;
+	font-family: "Finlandica Headline", sans-serif;
+	font-size: 0.85rem;
+}
+
+.time-input-label input[type="time"] {
+	min-width: 8.5rem;
 }
 
 .todo-form input:focus,
@@ -152,7 +194,7 @@ h1 {
 }
 
 .form-error {
-	margin: 0.5rem 0 0;
+	margin: 0;
 	color: #dc2626;
 	font-size: 0.9rem;
 }
@@ -222,6 +264,12 @@ h1 {
 	word-break: break-word;
 	white-space: normal;
 	line-height: 1.4;
+}
+
+.todo-time {
+	color: #a8d5a2;
+	font-size: 0.9rem;
+	white-space: nowrap;
 }
 
 .todo-item label .todo-edit-input {

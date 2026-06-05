@@ -9,13 +9,40 @@ const USER_STORAGE_KEY = "todoAppUser";
 
 const getTodosStorageKey = (username) => `todoAppTodos_${username}`;
 
+const isValidEmail = (email) =>
+	/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const timeToMinutes = (time) => {
+	const [hours, minutes] = time.split(":").map(Number);
+	return hours * 60 + minutes;
+};
+
+const formatTime12Hour = (time) => {
+	const [hours, minutes] = time.split(":").map(Number);
+	const period = hours >= 12 ? "PM" : "AM";
+	const hour12 = hours % 12 || 12;
+	return `${hour12}:${String(minutes).padStart(2, "0")} ${period}`;
+};
+
+const doTimesOverlap = (startA, endA, startB, endB) => {
+	const aStart = timeToMinutes(startA);
+	const aEnd = timeToMinutes(endA);
+	const bStart = timeToMinutes(startB);
+	const bEnd = timeToMinutes(endB);
+	return aStart < bEnd && bStart < aEnd;
+};
+
 const loadUserFromStorage = () => {
 	try {
 		const saved = localStorage.getItem(USER_STORAGE_KEY);
-		console.log("SAVED", saved);
 		if (!saved) return null;
 		const parsed = JSON.parse(saved);
-		if (parsed?.username) return { username: parsed.username };
+		if (parsed?.username) {
+			return { username: parsed.username, email: parsed.email ?? "" };
+		}
+		if (parsed?.email) {
+			return { username: parsed.email, email: parsed.email };
+		}
 	} catch {
 		/* ignore invalid storage */
 	}
@@ -35,18 +62,25 @@ const loadTodosForUser = (username) => {
 };
 
 function App() {
-	const [user, setUser] = useState();
+	const [user, setUser] = useState(() => loadUserFromStorage());
 	const [showLoginModal, setShowLoginModal] = useState(false);
 	const [showSignUpModal, setShowSignUpModal] = useState(false);
 	const [isLoginLoading, setIsLoginLoading] = useState(false);
+	const [isSavingLoading, setIsSavingLoading] = useState(false);
+	const [isAddLoading, setIsAddLoading] = useState(false);
 	const [isLogoutLoading, setIsLogoutLoading] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 
-	const [pendingLoginUsername, setPendingLoginUsername] = useState(null);
-	const [loginUsername, setLoginUsername] = useState("");
+	const [pendingLoginUser, setPendingLoginUser] = useState(null);
+	const [loginEmail, setLoginEmail] = useState("");
 	const [loginPassword, setLoginPassword] = useState("");
+	const [signupUsername, setSignupUsername] = useState("");
+	const [signupEmail, setSignupEmail] = useState("");
+	const [signupPassword, setSignupPassword] = useState("");
 	const [loginError, setLoginError] = useState("");
 	const [taskInput, setTaskInput] = useState("");
+	const [startTimeInput, setStartTimeInput] = useState("");
+	const [endTimeInput, setEndTimeInput] = useState("");
 	const [todos, setTodos] = useState(() => {
 		const savedUser = loadUserFromStorage();
 		return savedUser ? loadTodosForUser(savedUser.username) : [];
@@ -102,21 +136,29 @@ function App() {
 
 	const handleAddTodo = (event) => {
 		event.preventDefault();
+		setIsAddLoading(true);
+
 		const trimmedTask = taskInput.trim();
 		const formattedTask = formatTaskText(trimmedTask);
-		// #region agent log
-		// debugLog({
-		// 	hypothesisId: "H1",
-		// 	location: "src/App.jsx:36",
-		// 	message: "Add todo submit received",
-		// 	data: { taskInput, trimmedTaskLength: trimmedTask.length },
-		// });
-		// #endregion
 
 		if (!formattedTask) {
-			setFormError("");
+			setFormError("Add a todo.");
+			setIsAddLoading(false);
 			return;
 		}
+
+		if (!startTimeInput || !endTimeInput) {
+			setFormError("Start and end time are required.");
+			setIsAddLoading(false);
+			return;
+		}
+
+		if (timeToMinutes(endTimeInput) <= timeToMinutes(startTimeInput)) {
+			setFormError("End time must be after start time.");
+			setIsAddLoading(false);
+			return;
+		}
+
 		if (
 			todos.some(
 				(todo) =>
@@ -124,26 +166,46 @@ function App() {
 			)
 		) {
 			setFormError("Task already exists.");
+			setIsAddLoading(false);
 			return;
 		}
 
-		// #region agent log
-		// debugLog({
-		// 	hypothesisId: "H2",
-		// 	location: "src/App.jsx:47",
-		// 	message: "Attempting todo id creation",
-		// 	data: { cryptoAvailable: typeof crypto !== "undefined" },
-		// });
-		// #endregion
+		const overlappingTodo = todos.find(
+			(todo) =>
+				todo.startTime &&
+				todo.endTime &&
+				doTimesOverlap(
+					startTimeInput,
+					endTimeInput,
+					todo.startTime,
+					todo.endTime,
+				),
+		);
+
+		if (overlappingTodo) {
+			setFormError(
+				`Time overlaps with "${overlappingTodo.text}" (${formatTime12Hour(overlappingTodo.startTime)} to ${formatTime12Hour(overlappingTodo.endTime)}).`,
+			);
+			setIsAddLoading(false);
+			return;
+		}
+
 		const newTodo = {
 			id: crypto.randomUUID(),
 			text: formattedTask,
+			startTime: startTimeInput,
+			endTime: endTimeInput,
 			completed: false,
 		};
 
-		setTodos((currentTodos) => [newTodo, ...currentTodos]);
-		setTaskInput("");
-		setFormError("");
+		window.setTimeout(() => {
+			setTodos((currentTodos) => [newTodo, ...currentTodos]);
+			setTaskInput("");
+			setStartTimeInput("");
+			setEndTimeInput("");
+			setFormError("");
+			setIsAddLoading(false);
+		}, 2000);
 	};
 
 	const handleToggleTodo = (todoId) => {
@@ -212,18 +274,51 @@ function App() {
 	const handleCancelLogin = () => {
 		setShowLoginModal(false);
 		setShowSignUpModal(false);
-		setLoginUsername("");
+		setLoginEmail("");
 		setLoginPassword("");
+		setSignupUsername("");
+		setSignupEmail("");
+		setSignupPassword("");
 		setLoginError("");
+	};
+
+	const validateLoginInput = (email, password) => {
+		if (!email || !password) {
+			return "Email and password are required.";
+		}
+		if (!isValidEmail(email)) {
+			return "Please enter a valid email address.";
+		}
+		if (password.length < 8) {
+			return "Password must be at least 8 characters.";
+		}
+		return "";
+	};
+
+	const validateSignupInput = (username, email, password) => {
+		if (!username || !email || !password) {
+			return "Username, email, and password are required.";
+		}
+		if (username.trim().length < 3) {
+			return "Username must be at least 3 characters.";
+		}
+		if (!isValidEmail(email)) {
+			return "Please enter a valid email address.";
+		}
+		if (password.length < 8) {
+			return "Password must be at least 8 characters.";
+		}
+		return "";
 	};
 
 	const handleLogin = async (event) => {
 		event.preventDefault();
-		const username = loginUsername.trim();
+		const email = loginEmail.trim().toLowerCase();
 		const password = loginPassword;
 
-		if (!username || !password) {
-			setLoginError("Username and password are required.");
+		const validationError = validateLoginInput(email, password);
+		if (validationError) {
+			setLoginError(validationError);
 			return;
 		}
 
@@ -231,35 +326,39 @@ function App() {
 			const response = await fetch(`${API_BASE_URL}/validateUser`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ username, password }),
+				body: JSON.stringify({ email, password }),
 			});
 
 			const data = await response.json();
-			console.log("data", data);
 
 			if (!response.ok || !data.success) {
-				setLoginError(data.message || "Invalid username or password.");
+				setLoginError(data.message || "Invalid email or password.");
 				return;
 			}
 
 			setShowLoginModal(false);
-			setLoginUsername("");
+			setLoginEmail("");
 			setLoginPassword("");
 			setIsLoginLoading(true);
-			setPendingLoginUsername(username);
+			setPendingLoginUser({
+				username: data.username,
+				email: data.email ?? email,
+			});
 			setLoginError("");
 		} catch (err) {
-			setLoginError("Could not reach server", err);
+			setLoginError("Could not reach server");
 		}
 	};
 
 	const handleSignUp = async (event) => {
 		event.preventDefault();
-		const username = loginUsername.trim();
-		const password = loginPassword;
+		const username = signupUsername.trim();
+		const email = signupEmail.trim().toLowerCase();
+		const password = signupPassword;
 
-		if (!username || !password) {
-			setLoginError("Username and password are required.");
+		const validationError = validateSignupInput(username, email, password);
+		if (validationError) {
+			setLoginError(validationError);
 			return;
 		}
 
@@ -267,41 +366,41 @@ function App() {
 			const response = await fetch(`${API_BASE_URL}/signup`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ username, password }),
+				body: JSON.stringify({ username, email, password }),
 			});
 
 			const data = await response.json();
-			console.log("data", data);
 
 			if (!response.ok || !data.success) {
-				setLoginError(data.message || "Invalid username or password.");
+				setLoginError(data.message || "Could not create account.");
 				return;
 			}
 
 			setShowLoginModal(false);
 			setShowSignUpModal(false);
-			setLoginUsername("");
-			setLoginPassword("");
-			setIsLogoutLoading(true);
-			setPendingLoginUsername(username);
+			setSignupUsername("");
+			setSignupEmail("");
+			setSignupPassword("");
+			setIsLoginLoading(true);
+			setPendingLoginUser({ username, email });
 			setLoginError("");
 		} catch (err) {
-			setLoginError("Could not reach server", err);
+			setLoginError("Could not reach server");
 		}
 	};
 
 	useEffect(() => {
-		if (!isLoginLoading || !pendingLoginUsername) return;
+		if (!isLoginLoading || !pendingLoginUser) return;
 
 		const timer = window.setTimeout(() => {
-			setUser({ username: pendingLoginUsername });
-			setTodos(loadTodosForUser(pendingLoginUsername));
+			setUser(pendingLoginUser);
+			setTodos(loadTodosForUser(pendingLoginUser.username));
 			setIsLoginLoading(false);
-			setPendingLoginUsername(null);
+			setPendingLoginUser(null);
 		}, 2000);
 
 		return () => window.clearTimeout(timer);
-	}, [isLoginLoading, pendingLoginUsername]);
+	}, [isLoginLoading, pendingLoginUser]);
 
 	useEffect(() => {
 		if (!isLogoutLoading) return;
@@ -319,9 +418,12 @@ function App() {
 				JSON.stringify(todos),
 			);
 		}
+		localStorage.removeItem(USER_STORAGE_KEY);
 		setUser(null);
 		setTodos([]);
 		setTaskInput("");
+		setStartTimeInput("");
+		setEndTimeInput("");
 		setFormError("");
 		setEditingTodoId(null);
 		setEditInput("");
@@ -329,8 +431,9 @@ function App() {
 		setShowDeleteAllModal(false);
 		setShowLoginModal(false);
 		setIsLoginLoading(false);
+		setIsAddLoading(false);
 		setIsLogoutLoading(true);
-		setPendingLoginUsername(null);
+		setPendingLoginUser(null);
 	};
 
 	const handleStartEditTodo = (todo) => {
@@ -346,10 +449,14 @@ function App() {
 	};
 
 	const handleSaveEditTodo = (todoId) => {
+		setIsSavingLoading(true);
+
 		const trimmedTask = editInput.trim();
 		const formattedTask = formatTaskText(trimmedTask);
+
 		if (!formattedTask) {
 			setEditError("Task name is required.");
+			setIsSavingLoading(false);
 			return;
 		}
 
@@ -361,17 +468,21 @@ function App() {
 			)
 		) {
 			setEditError("Task already exists.");
+			setIsSavingLoading(false);
 			return;
 		}
 
-		setTodos((currentTodos) =>
-			currentTodos.map((todo) =>
-				todo.id === todoId ? { ...todo, text: formattedTask } : todo,
-			),
-		);
-		handleCancelEditTodo();
-	};
+		window.setTimeout(() => {
+			setTodos((currentTodos) =>
+				currentTodos.map((todo) =>
+					todo.id === todoId ? { ...todo, text: formattedTask } : todo,
+				),
+			);
 
+			setIsSavingLoading(false);
+			handleCancelEditTodo();
+		}, 2000);
+	};
 	// useEffect(() => {
 	// 	// #region agent log
 	// 	debugLog({
@@ -389,10 +500,8 @@ function App() {
 	// }, [todos, completedCount, notCompletedCount]);
 
 	useEffect(() => {
-		if (user) {
+		if (user?.username) {
 			localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-		} else {
-			localStorage.removeItem(USER_STORAGE_KEY);
 		}
 	}, [user]);
 
@@ -531,22 +640,56 @@ function App() {
 				) : null}
 
 				<form className="todo-form" onSubmit={handleAddTodo}>
-					<input
-						type="text"
-						value={taskInput}
-						disabled={!user}
-						onChange={(event) => {
-							setTaskInput(event.target.value);
-							if (formError) setFormError("");
-						}}
-						placeholder="Add a new todo..."
-						aria-label="Todo task"
-					/>
-					<button type="submit" disabled={!user}>
-						Add
+					<div className="todo-form-fields">
+						<div className="todo-input-group">
+							<input
+								type="text"
+								value={taskInput}
+								disabled={!user}
+								onChange={(event) => {
+									setTaskInput(event.target.value);
+									if (formError) setFormError("");
+								}}
+								placeholder="Add a new todo..."
+								aria-label="Todo task"
+							/>
+							{formError ? (
+								<p className="form-error todo-input-error">{formError}</p>
+							) : null}
+						</div>
+						<div className="time-inputs">
+							<label className="time-input-label">
+								<span>From</span>
+								<input
+									type="time"
+									value={startTimeInput}
+									disabled={!user}
+									onChange={(event) => {
+										setStartTimeInput(event.target.value);
+										if (formError) setFormError("");
+									}}
+									aria-label="Start time"
+								/>
+							</label>
+							<label className="time-input-label">
+								<span>To</span>
+								<input
+									type="time"
+									value={endTimeInput}
+									disabled={!user}
+									onChange={(event) => {
+										setEndTimeInput(event.target.value);
+										if (formError) setFormError("");
+									}}
+									aria-label="End time"
+								/>
+							</label>
+						</div>
+					</div>
+					<button type="submit" disabled={!user || isAddLoading}>
+						{isAddLoading ? "Adding..." : "Add"}
 					</button>
 				</form>
-				{formError ? <p className="form-error">{formError}</p> : null}
 
 				{user ? (
 					<>
@@ -587,6 +730,13 @@ function App() {
 											) : (
 												<span className={todo.completed ? "done" : ""}>
 													{todo.text}
+													{todo.startTime && todo.endTime ? (
+														<span className="todo-time">
+															{" "}
+															{formatTime12Hour(todo.startTime)} to{" "}
+															{formatTime12Hour(todo.endTime)}
+														</span>
+													) : null}
 												</span>
 											)}
 										</label>
@@ -657,16 +807,16 @@ function App() {
 						>
 							<form className="login-form" onSubmit={handleLogin}>
 								<label>
-									Username
+									Email
 									<input
-										type="text"
-										value={loginUsername}
+										type="email"
+										value={loginEmail}
 										onChange={(event) => {
-											setLoginUsername(event.target.value);
+											setLoginEmail(event.target.value);
 											if (loginError) setLoginError("");
 										}}
-										autoComplete="username"
-										placeholder="Enter username"
+										autoComplete="email"
+										placeholder="Enter email"
 									/>
 								</label>
 								<label>
@@ -679,7 +829,8 @@ function App() {
 											if (loginError) setLoginError("");
 										}}
 										autoComplete="current-password"
-										placeholder="Enter password"
+										placeholder="Enter password (min 8 characters)"
+										minLength={8}
 									/>
 								</label>
 								{loginError ? (
@@ -720,9 +871,9 @@ function App() {
 									Username
 									<input
 										type="text"
-										value={loginUsername}
+										value={signupUsername}
 										onChange={(event) => {
-											setLoginUsername(event.target.value);
+											setSignupUsername(event.target.value);
 											if (loginError) setLoginError("");
 										}}
 										autoComplete="username"
@@ -730,16 +881,30 @@ function App() {
 									/>
 								</label>
 								<label>
+									Email
+									<input
+										type="email"
+										value={signupEmail}
+										onChange={(event) => {
+											setSignupEmail(event.target.value);
+											if (loginError) setLoginError("");
+										}}
+										autoComplete="email"
+										placeholder="Enter email"
+									/>
+								</label>
+								<label>
 									Password
 									<input
 										type="password"
-										value={loginPassword}
+										value={signupPassword}
 										onChange={(event) => {
-											setLoginPassword(event.target.value);
+											setSignupPassword(event.target.value);
 											if (loginError) setLoginError("");
 										}}
-										autoComplete="current-password"
-										placeholder="Enter password"
+										autoComplete="new-password"
+										placeholder="Enter password (min 8 characters)"
+										minLength={8}
 									/>
 								</label>
 								{loginError ? (
@@ -762,12 +927,18 @@ function App() {
 					</div>
 				) : null}
 
-				{isLoginLoading ? (
+				{isLoginLoading || isSavingLoading || isAddLoading ? (
 					<div
 						className="login-loading-overlay"
 						role="status"
 						aria-live="polite"
-						aria-label="Signing in"
+						aria-label={
+							isLoginLoading
+								? "Signing in"
+								: isAddLoading
+									? "Adding todo"
+									: "Saving todos"
+						}
 					>
 						<OrbitProgress color="#32cd32" size="small" text="" textColor="" />
 					</div>
